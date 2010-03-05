@@ -3,6 +3,10 @@
 /**
  * Returns a form containing a number of other forms.
  *
+ * When the forms are submitted their first button is pressed in array order.
+ * Make sure you rearrange the buttons in your form accordingly in a form_alter
+ * when using this function.
+ *
  * @param ...
  *   Every argument is a list of arguments to be passed to drupal_get_form.
  *   For example, if the first form is called as
@@ -36,6 +40,10 @@ function multiform_get_form($form, $form_state) {
   $form_state = $form_state_save;
   // The whole form should never be submitted so delete $form_state['input].
   $form_state['input'] = array();
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
   return $form;
 }
 
@@ -67,6 +75,10 @@ function _multiform_pre_render(&$element, $form_id) {
     // If the name was op then we want multiform[$form_id][op]. If it was
     // foo[bar] then we want multiform[$form_id][foo][bar].
     $element['#name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#name']);
+  }
+  // Do not display buttons.
+  if (isset($element['#button_type'])) {
+    $element['#access'] = FALSE;
   }
 }
 
