@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * Returns a form containing a number of other forms.
+ *
+ * @param ...
+ *   Every argument is a list of arguments to be passed to drupal_get_form.
+ *   For example, if the first form is called as
+ *   drupal_get_form($form_id1, $arg1, $arg2); and
+ *   the second as drupal_get_form($form_id2, $arg3, $arg4) call
+ *   multiform_get_form(array($form_id1, $arg1, $arg2), array($form_id2, $arg3, $arg4)).
+ */
+function multiform_get_form($form, $form_state) {
+  // Save the original form_state.
+  $form_state_save = $form_state;
+  $all_args = func_get_args();
+  // Remove $form and $form_state from the passed in arguments.
+  array_shift($all_args);
+  array_shift($all_args);
+  foreach ($all_args as $weight => $args) {
+    $form_id = array_shift($args);
+    // Reset $form_state and disable redirection.
+    $form_state = array('no_redirect' => TRUE);
+    // This line is copied literally from drupal_get_form().
+    $form_state['build_info']['args'] = $args;
+    if (isset($form_state_save['input']['multiform'][$form_id])) {
+      // drupal_build_form() honors our $form_state['input'] setup.
+      $form_state['input'] = $form_state_save['input']['multiform'][$form_id];
+    }
+    // Build and process this form based.
+    $form['multiform'][$form_id] = drupal_build_form($form_id, $form_state);
+  }
+  // This is where the magic will happen.
+  $form['multiform']['#pre_render'] = array('multiform_pre_render');
+  // Restore $form_state.
+  $form_state = $form_state_save;
+  // The whole form should never be submitted so delete $form_state['input].
+  $form_state['input'] = array();
+  return $form;
+}
+
+/**
+ * #pre_render callback for the container of two forms from multiform_get_form().
+ */
+function multiform_pre_render(&$form) {
+  foreach (element_children($form) as $form_id) {
+    // Do not render the <form> tags.
+    $form[$form_id]['#theme_wrappers'] = array();
+    // Call the recursive helper.
+    _multiform_pre_render($form[$form_id], $form_id);
+  }
+  return $form;
+}
+
+/**
+ * Recursive helper for multiform_pre_render().
+ */
+function _multiform_pre_render(&$element, $form_id) {
+  // Recurse.
+  foreach (element_children($element) as $key) {
+    _multiform_pre_render($element[$key], $form_id);
+  }
+  // By only changing $element['#name'] form API is not affected but the
+  // browser will put the element values into _POST where multiform_get_form
+  // expects them.
+  if (isset($element['#name'])) {
+    // If the name was op then we want multiform[$form_id][op]. If it was
+    // foo[bar] then we want multiform[$form_id][foo][bar].
+    $element['#name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#name']);
+  }
+}
+
+// -------- Testing below.
+
+function multiform_menu() {
+  return array(
+    'multiform' => array(
+      'access callback' => TRUE,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('multiform_get_form', array('multiform_test1'), array('multiform_test2')),
+    ),
+  );
+}
+
+function multiform_test1($form) {
+  $form['test1'] = array('#type' => 'textfield', '#title' => 'test1');
+  $form['submit'] = array('#type' => 'submit', '#value' => 'save');
+  return $form;
+}
+
+function multiform_test1_submit($form, $form_state) {
+  debug($form_state['values']);
+}
+
+function multiform_test2($form) {
+  $form['submit'] = array('#type' => 'submit', '#value' => 'save');
+  $form['test2'] = array('#type' => 'textfield', '#title' => 'test2');
+  return $form;
+}
+
+function multiform_test2_submit($form, $form_state) {
+  debug($form_state['values']);
+}
