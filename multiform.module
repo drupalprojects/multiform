@@ -14,14 +14,49 @@
  *   the second as drupal_get_form($form_id2, $arg3, $arg4) call
  *   multiform_get_form(array($form_id1, $arg1, $arg2), array($form_id2, $arg3, $arg4)).
  */
-function multiform_get_form($form, $form_state) {
-  // Save the original form_state.
-  $form_state_save = $form_state;
+function multiform_get_form() {
   $all_args = func_get_args();
-  // Remove $form and $form_state from the passed in arguments.
-  array_shift($all_args);
-  array_shift($all_args);
-  foreach ($all_args as $weight => $args) {
+  $redirect = NULL;
+  $form = element_info('form');
+  $form['#id'] = 'multiform';
+  $form['#attributes'] = array();
+  // We need a $form_id so that the submission of other forms (like search) do
+  // not disturb us.
+  $form['form_id'] = array(
+    '#type' => 'hidden',
+    '#value' => 'multiform',
+    '#id' => drupal_html_id("edit-multiform"),
+    '#name' => 'form_id',
+    '#attributes' => array(),
+  );
+  $build_id = 'form-' . md5(uniqid(mt_rand(), TRUE));
+  // We need a $form_build_id because the buttons are cached and the values
+  // belonging to them in $_POST are handed to each form so those can recognize
+  // the buttons pressed.
+  $form['form_build_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $build_id,
+    '#id' => $build_id,
+    '#name' => 'form_build_id',
+    '#attributes' => array(),
+  );
+  // This is where buttons will be collected.
+  $form['buttons'] = array();
+  $form['buttons']['#weight'] = 1000;
+  $form_state_save = array();
+  $button_names = array();
+  // The only way to support $_GET would be to accept $form_state. Maybe later.
+  if ($_POST && $_POST['form_id'] == 'multiform' && !empty($_POST['form_build_id'])) {
+    $form_state_save['input'] = $_POST;
+    // Retrieve buttons.
+    if ($button_elements = form_get_cache($_POST['form_build_id'], $form_state_save)) {
+      foreach ($button_elements as $button) {
+        $name = isset($button_elements['#name']) ? $button_elements['#name'] : 'op';
+        $button_names[$name] = $name;
+      }
+    }
+  }
+  foreach ($all_args as $key => $args) {
     $form_id = array_shift($args);
     // Reset $form_state and disable redirection.
     $form_state = array('no_redirect' => TRUE);
@@ -30,55 +65,52 @@ function multiform_get_form($form, $form_state) {
     if (isset($form_state_save['input']['multiform'][$form_id])) {
       // drupal_build_form() honors our $form_state['input'] setup.
       $form_state['input'] = $form_state_save['input']['multiform'][$form_id];
+      // Pass in the information about pressed buttons too.
+      foreach ($button_names as $name) {
+        if (isset($form_state_save['input'][$name])) {
+          $form_state['input'][$name] = $form_state_save['input'][$name];
+        }
+      }
     }
-    // Build and process this form based.
-    $form['multiform'][$form_id] = drupal_build_form($form_id, $form_state);
-  }
-  // This is where the magic will happen.
-  $form['multiform']['#pre_render'] = array('multiform_pre_render');
-  // Restore $form_state.
-  $form_state = $form_state_save;
-  // The whole form should never be submitted so delete $form_state['input].
-  $form_state['input'] = array();
-  $form['save'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save'),
-  );
-  return $form;
-}
-
-/**
- * #pre_render callback for the container of two forms from multiform_get_form().
- */
-function multiform_pre_render(&$form) {
-  foreach (element_children($form) as $form_id) {
+    // Build and process this form.
+    $current_form = drupal_build_form($form_id, $form_state);
     // Do not render the <form> tags.
-    $form[$form_id]['#theme_wrappers'] = array();
-    // Call the recursive helper.
-    _multiform_pre_render($form[$form_id], $form_id);
+    $current_form['#theme_wrappers'] = array();
+    _multiform_get_form($current_form, $form['buttons'], $form_id);
+    $form['multiform'][$form_id] = $current_form;
+    if (!$key) {
+      $redirect = isset($form_state['redirect']) ? $form_state['redirect'] : NULL;
+    }
+  }
+  form_set_cache($build_id, $form['buttons'], $form_state_save);
+  if (!empty($form_state_save['input'])) {
+    drupal_redirect_form($redirect);
   }
   return $form;
 }
 
 /**
- * Recursive helper for multiform_pre_render().
+ * Recursive helper for multiform_get_form().
  */
-function _multiform_pre_render(&$element, $form_id) {
+function _multiform_get_form(&$element, &$buttons, $form_id) {
   // Recurse.
   foreach (element_children($element) as $key) {
-    _multiform_pre_render($element[$key], $form_id);
+    _multiform_get_form($element[$key], $buttons, $form_id);
+  }
+  // Save but do not display buttons. Note that this is done before the #name
+  // is changed. This way the buttons belong to the top form and their values
+  // can be handed to each form.
+  if (isset($element['#button_type'])) {
+    $buttons[$element['#value']] = $element;
+    $element['#access'] = FALSE;
   }
   // By only changing $element['#name'] form API is not affected but the
   // browser will put the element values into _POST where multiform_get_form
   // expects them.
-  if (isset($element['#name'])) {
+  elseif (isset($element['#name'])) {
     // If the name was op then we want multiform[$form_id][op]. If it was
     // foo[bar] then we want multiform[$form_id][foo][bar].
     $element['#name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#name']);
-  }
-  // Do not display buttons.
-  if (isset($element['#button_type'])) {
-    $element['#access'] = FALSE;
   }
 }
 
@@ -88,28 +120,30 @@ function multiform_menu() {
   return array(
     'multiform' => array(
       'access callback' => TRUE,
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('multiform_get_form', array('multiform_test1'), array('multiform_test2')),
+      'page callback' => 'multiform_get_form',
+      'page arguments' => array(array('multiform_test1'), array('multiform_test2')),
     ),
   );
 }
 
-function multiform_test1($form) {
+function multiform_test1($form, $form_state) {
   $form['test1'] = array('#type' => 'textfield', '#title' => 'test1');
-  $form['submit'] = array('#type' => 'submit', '#value' => 'save');
+  $form['submit'] = array('#type' => 'submit', '#value' => 'save', '#submit' => array('multiform_test_submit_button'));
+  $form['delete'] = array('#type' => 'submit', '#value' => 'delete', '#submit' => array('multiform_test_delete'));
   return $form;
 }
 
-function multiform_test1_submit($form, $form_state) {
-  debug($form_state['values']);
-}
-
 function multiform_test2($form) {
-  $form['submit'] = array('#type' => 'submit', '#value' => 'save');
+  $form['submit'] = array('#type' => 'submit', '#value' => 'save', '#submit' => array('multiform_test_submit_button'));
+  $form['delete'] = array('#type' => 'submit', '#value' => 'delete', '#submit' => array('multiform_test_delete'));
   $form['test2'] = array('#type' => 'textfield', '#title' => 'test2');
   return $form;
 }
 
-function multiform_test2_submit($form, $form_state) {
-  debug($form_state['values']);
+function multiform_test_submit_button($form, $form_state) {
+  drupal_set_message($form['#form_id'] . 'multiform_test_submit_button');
+}
+
+function multiform_test_delete($form, $form_state) {
+  drupal_set_message($form['#form_id'] . 'multiform_test_delete');
 }
