@@ -51,6 +51,10 @@ function multiform_get_form() {
     // Retrieve buttons.
     if ($button_elements = form_get_cache($_POST['form_build_id'], $form_state_save)) {
       foreach ($button_elements as $button) {
+        // For each button, save it's name. Later on we will need the button
+        // names because the buttons are used in the multiform but their values
+        // in $_POST (if it exists) needs to be handed down to each form so
+        // those can recognize the button press.
         $name = isset($button_elements['#name']) ? $button_elements['#name'] : 'op';
         $button_names[$name] = $name;
       }
@@ -78,6 +82,7 @@ function multiform_get_form() {
     $current_form['#theme_wrappers'] = array();
     _multiform_get_form($current_form, $form['buttons'], $form_id);
     $form['multiform'][$form_id] = $current_form;
+    // Keep the redirect from the first form.
     if (!$key) {
       $redirect = isset($form_state['redirect']) ? $form_state['redirect'] : NULL;
     }
