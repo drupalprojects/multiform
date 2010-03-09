@@ -81,9 +81,10 @@ function multiform_get_form() {
     // Do not render the <form> tags.
     $current_form['#theme_wrappers'] = array();
     _multiform_get_form($current_form, $form['buttons'], $form_id);
-    $form['multiform'][$form_id] = $current_form;
-    $form['multiform'][$form_id]['#prefix'] = '<div id="'. str_replace('_', '-', $form_id) . '-' . $key .'">';
-    $form['multiform'][$form_id]['#suffix'] = '</div>';
+    $index = $form_id . '_' . $key;
+    $form['multiform'][$index] = $current_form;
+    $form['multiform'][$index]['#prefix'] = '<div id="'. str_replace('_', '-', $index) . '">';
+    $form['multiform'][$index]['#suffix'] = '</div>';
     // Keep the redirect from the first form.
     if (!$key) {
       $redirect = isset($form_state['redirect']) ? $form_state['redirect'] : NULL;
