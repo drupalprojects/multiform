@@ -81,7 +81,8 @@ function multiform_get_form() {
     if (isset($_files_save['multiform']['name'][$index])) {
       $_FILES = array();
       foreach (array('name', 'type', 'tmp_name', 'error', 'size') as $files_key) {
-        $_FILES[$files_key] = $_files_save['multiform'][$files_key][$index];
+        // PHP is seriously messed up, dude.
+        $_FILES['files'][$files_key] = $_files_save['multiform'][$files_key][$index]['files'];
       }
     }
     // Build and process this form.
