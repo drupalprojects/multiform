@@ -67,9 +67,10 @@ function multiform_get_form() {
     $form_state = array('no_redirect' => TRUE);
     // This line is copied literally from drupal_get_form().
     $form_state['build_info']['args'] = $args;
-    if (isset($form_state_save['input']['multiform'][$form_id])) {
+    $index = $form_id . '_' . $key;
+    if (isset($form_state_save['input']['multiform'][$index])) {
       // drupal_build_form() honors our $form_state['input'] setup.
-      $form_state['input'] = $form_state_save['input']['multiform'][$form_id];
+      $form_state['input'] = $form_state_save['input']['multiform'][$index];
       // Pass in the information about pressed buttons too.
       foreach ($button_names as $name) {
         if (isset($form_state_save['input'][$name])) {
@@ -77,12 +78,17 @@ function multiform_get_form() {
         }
       }
     }
+    if (isset($_files_save['multiform']['name'][$index])) {
+      $_FILES = array();
+      foreach (array('name', 'type', 'tmp_name', 'error', 'size') as $files_key) {
+        $_FILES[$files_key] = $_files_save['multiform'][$files_key][$index];
+      }
+    }
     // Build and process this form.
     $current_form = drupal_build_form($form_id, $form_state);
     // Do not render the <form> tags.
     $current_form['#theme_wrappers'] = array();
-    _multiform_get_form($current_form, $form['buttons'], $form_id);
-    $index = $form_id . '_' . $key;
+    _multiform_get_form($current_form, $form['buttons'], $index);
     $form['multiform'][$index] = $current_form;
     $form['multiform'][$index]['#prefix'] = '<div id="'. str_replace('_', '-', $index) . '">';
     $form['multiform'][$index]['#suffix'] = '</div>';
