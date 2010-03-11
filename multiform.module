@@ -48,6 +48,7 @@ function multiform_get_form() {
   // The only way to support $_GET would be to accept $form_state. Maybe later.
   if ($_POST && $_POST['form_id'] == 'multiform' && !empty($_POST['form_build_id'])) {
     $form_state_save['input'] = $_POST;
+    $_files_save = $_FILES;
     // Retrieve buttons.
     if ($button_elements = form_get_cache($_POST['form_build_id'], $form_state_save)) {
       foreach ($button_elements as $button) {
@@ -85,6 +86,9 @@ function multiform_get_form() {
     $form['multiform'][$index] = $current_form;
     $form['multiform'][$index]['#prefix'] = '<div id="'. str_replace('_', '-', $index) . '">';
     $form['multiform'][$index]['#suffix'] = '</div>';
+    if (isset($form_state['has_file_element'])) {
+      $form['#attributes']['enctype'] = 'multipart/form-data';
+    }
     // Keep the redirect from the first form.
     if (!$key) {
       $redirect = isset($form_state['redirect']) ? $form_state['redirect'] : NULL;
