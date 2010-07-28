@@ -89,12 +89,13 @@ function multiform_get_form() {
     }
     // Build and process this form.
     $current_form = drupal_build_form($form_id, $form_state);
-    // Do not render the <form> tags.
-    $current_form['#theme_wrappers'] = array();
+    // Do not render the <form> tags. Instead we render the <form> as a <div>.
+    $current_form['#theme_wrappers'] = array('container');
     _multiform_get_form($current_form, $form['buttons'], $index);
+    // Unset any attributes specifics to form tags.
+    $disallowed_attributes = array('enctype', 'action', 'method');
+    $current_form['#attributes'] = array_diff_key($current_form['#attributes'], array_flip($disallowed_attributes));
     $form['multiform'][$index] = $current_form;
-    $form['multiform'][$index]['#prefix'] = '<div id="'. str_replace('_', '-', $index) . '">';
-    $form['multiform'][$index]['#suffix'] = '</div>';
     if (isset($form_state['has_file_element'])) {
       $form['#attributes']['enctype'] = 'multipart/form-data';
     }
