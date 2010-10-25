@@ -142,6 +142,7 @@ function multiform_menu() {
   return array(
     'multiform' => array(
       'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
       'page callback' => 'multiform_get_form',
       'page arguments' => array(array('multiform_test1'), array('multiform_test2')),
     ),
