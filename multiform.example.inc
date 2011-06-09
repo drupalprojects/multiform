@@ -1,0 +1,9 @@
+<?php
+/**
+ * @file
+ * 
+ * 
+ *
+ * @author Kálmán Hosszu - hosszu.kalman@gmail.com - http://premiumcmsthemes.com http://www.kalman-hosszu.com
+ */
+ 
