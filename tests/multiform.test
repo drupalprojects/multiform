@@ -22,4 +22,10 @@ class MultiformTestCase extends DrupalWebTestCase {
     );
   }
   
+  /**
+   * Overriden setUp function.
+   */
+  public function setUp() {
+    parent::setUp('multiform', 'multiform_test');
+  }
 }
