@@ -67,4 +67,35 @@ class MultiformTestCase extends DrupalWebTestCase {
     $this->assertFieldByName('op', 'save');
   }
   
+  /**
+   * Check required fields.
+   */
+  public function testRequiredFields() {
+    $first_text = array('multiform[multiform_test2_1_0][required_text_1]' => 'test1 value');
+    $second_text = array('multiform[multiform_test2_2_1][required_text_2]' => 'test2 value');
+    // No required fields
+    $this->drupalPost('multiform-test/2', array(), 'save');
+    $this->assertText('test1 field is required.');
+    $this->assertText('test2 field is required.');
+    $this->assertNoText('multiform_test2_1multiform_test2_submit_button');
+    $this->assertNoText('multiform_test2_2multiform_test2_submit_button');
+    
+    // Send all required fields
+    $this->drupalPost(NULL, array_merge($first_text, $second_text), 'save');
+    $this->assertText('multiform_test2_1multiform_test2_submit_button');
+    $this->assertText('multiform_test2_2multiform_test2_submit_button');
+    $this->assertNoText('test1 field is required.');
+    $this->assertNoText('test2 field is required.');
+    
+    // Send first form's required field
+    $this->drupalPost(NULL, $first_text, 'save');
+    $this->assertNoText('multiform_test2_1multiform_test2_submit_button');
+    $this->assertText('test2 field is required.');
+    
+    // Send second form's required field
+    $this->drupalPost(NULL, $second_text, 'save');
+    $this->assertNoText('multiform_test2_2multiform_test2_submit_button');
+    $this->assertText('test1 field is required.');
+  }
+  
 }
