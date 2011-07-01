@@ -110,3 +110,62 @@ function multiform_test1_submit_button($form, $form_state) {
 function multiform_test1_delete_button($form, $form_state) {
   drupal_set_message($form['#form_id'] . 'multiform_test1_delete_button');
 }
+
+
+/* SECOND TEST CASE */
+
+/**
+ * Build multiform_test2_1 form.
+ *
+ * @param type $form
+ * @param type $form_state
+ * @return array 
+ */
+function multiform_test2_1($form, $form_state) {
+  $form['required_text_1'] = array(
+    '#type' => 'textfield',
+    '#title' => 'test1',
+    '#required' => TRUE,
+  );
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'save',
+    '#submit' => array('multiform_test2_submit_button'),
+  );
+  
+  return $form;
+}
+
+/**
+ * Build multiform_test2_2 form.
+ *
+ * @param type $form
+ * @param type $form_state
+ * @return array 
+ */
+function multiform_test2_2($form, $form_state) {
+  $form['required_text_2'] = array(
+    '#type' => 'textfield',
+    '#title' => 'test2',
+    '#required' => TRUE,
+  );
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'save',
+    '#submit' => array('multiform_test2_submit_button'),
+  );
+  
+  return $form;
+}
+
+/**
+ * Submit handing.
+ *
+ * @param type $form
+ * @param type $form_state 
+ */
+function multiform_test2_submit_button($form, $form_state) {
+  drupal_set_message($form['#form_id'] . 'multiform_test2_submit_button');
+}
