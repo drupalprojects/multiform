@@ -83,3 +83,22 @@ function multiform_test1_2($form, $form_state) {
   return $form;
 }
 
+/**
+ * Submit handing.
+ *
+ * @param type $form
+ * @param type $form_state 
+ */
+function multiform_test1_submit_button($form, $form_state) {
+  drupal_set_message($form['#form_id'] . 'multiform_test1_submit_button');
+}
+
+/**
+ * Handling delete.
+ *
+ * @param type $form
+ * @param type $form_state 
+ */
+function multiform_test1_delete_button($form, $form_state) {
+  drupal_set_message($form['#form_id'] . 'multiform_test1_delete_button');
+}
