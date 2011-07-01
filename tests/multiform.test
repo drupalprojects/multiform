@@ -52,4 +52,19 @@ class MultiformTestCase extends DrupalWebTestCase {
     $this->assertText('multiform_test1_2multiform_test1_delete_button', t('Second form delete message is found.'));
   }
   
+  /**
+   * Check the merged fields are exists.
+   */
+  public function testFieldsAreExists() {
+    // Go to the form page
+    $this->drupalGet('multiform-test/2');
+    
+    // Check textfields
+    $this->assertFieldByName('multiform[multiform_test2_1_0][required_text_1]');
+    $this->assertFieldByName('multiform[multiform_test2_2_1][required_text_2]');
+    
+    // Check button
+    $this->assertFieldByName('op', 'save');
+  }
+  
 }
