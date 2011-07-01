@@ -9,4 +9,17 @@
 
 class MultiformTestCase extends DrupalWebTestCase {
   
+  /**
+   * Info method.
+   *
+   * @return array 
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Forms functionality',
+      'description' => 'Testing multiform functionality.' ,
+      'group' => 'Multiform',
+    );
+  }
+  
 }
