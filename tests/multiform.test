@@ -55,7 +55,7 @@ class MultiformTestCase extends DrupalWebTestCase {
   /**
    * Check the merged fields are exists.
    */
-  public function testFieldsAreExists() {
+  public function testFieldsAreExist() {
     // Go to the form page
     $this->drupalGet('multiform-test/2');
     
