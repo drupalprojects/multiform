@@ -47,7 +47,7 @@ function multiform_get_form() {
   $form_state_save = array();
   $button_names = array();
   // The only way to support $_GET would be to accept $form_state. Maybe later.
-  if ($_POST && $_POST['form_id'] == 'multiform' && !empty($_POST['form_build_id'])) {
+  if ($_POST && isset($_POST['form_id']) && $_POST['form_id'] == 'multiform' && !empty($_POST['form_build_id'])) {
     $form_state_save['input'] = $_POST;
     $_files_save = $_FILES;
     // Retrieve buttons.
