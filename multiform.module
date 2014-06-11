@@ -43,6 +43,7 @@ function multiform_get_form() {
   // This is where buttons will be collected.
   $form['buttons'] = array();
   $form['buttons']['#weight'] = 1000;
+  $form['buttons']['#build_id'] = $build_id;
   $form_state_save = array();
   $button_names = array();
   // The only way to support $_GET would be to accept $form_state. Maybe later.
