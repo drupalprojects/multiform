@@ -29,7 +29,7 @@ function multiform_get_form() {
     '#name' => 'form_id',
     '#attributes' => array(),
   );
-  $build_id = 'form-' . md5(uniqid(mt_rand(), TRUE));
+  $build_id = 'form-' . drupal_random_key();
   // We need a $form_build_id because the buttons are cached and the values
   // belonging to them in $_POST are handed to each form so those can recognize
   // the buttons pressed.
