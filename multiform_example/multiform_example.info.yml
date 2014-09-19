@@ -1,0 +1,5 @@
+name: Multiple forms example
+type: module
+description: 'Example how to displaying and submitting multiple forms in one form.'
+version: VERSION
+core: 8.x

@@ -1,0 +1,21 @@
+example1:
+  path: '/multiform_example/example1'
+  defaults:
+    _form: '\Drupal\multiform_example\Form\Example1'
+    _title: 'Example 1'
+  requirements:
+    _access: 'TRUE'
+example2:
+  path: '/multiform_example/example2'
+  defaults:
+    _form: '\Drupal\multiform_example\Form\Example2'
+    _title: 'Example 2'
+  requirements:
+    _access: 'TRUE'
+multiform:
+  path: '/multiform_example/multiform'
+  defaults:
+    _content: '\Drupal\multiform_example\Controller\MultiformExampleController::content'
+    _title: 'Example for multiform'
+  requirements:
+    _access: 'TRUE'

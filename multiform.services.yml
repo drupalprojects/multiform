@@ -1,0 +1,4 @@
+services:
+  multiform.form_builder:
+    class: Drupal\multiform\MultiFormBuilder
+    arguments: ['@form_builder', '@class_resolver', '@request_stack']

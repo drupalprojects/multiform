@@ -1,5 +1,5 @@
 == SUMMARY ==
-This is an API module which lets you put several forms into one <form>.
+The module declares a new MultiFormBuilder and lets you put several forms into one <form>.
 
 == USAGE ==
-For code example, check multiform.example.inc file.
+For code example, check the multiform_example module.
