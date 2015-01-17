@@ -1,6 +1,5 @@
-
-name = Multiple forms
-description = Allows displaying and submitting multiple forms in one form
-files[] = multiform.module
+name = Multiform
+description = Allows displaying and submitting multiple forms in one form.
 files[] = tests/multiform.test
 core = 7.x
+package = Multiform

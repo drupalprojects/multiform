@@ -1,141 +1,252 @@
 <?php
 
 /**
- * Returns a form containing a number of other forms.
- *
- * When the forms are submitted their first button is pressed in array order.
- * Make sure you rearrange the buttons in your form accordingly in a form_alter
- * when using this function.
- *
- * @param ...
- *   Every argument is a list of arguments to be passed to drupal_get_form.
- *   For example, if the first form is called as
- *   drupal_get_form($form_id1, $arg1, $arg2); and
- *   the second as drupal_get_form($form_id2, $arg3, $arg4) call
- *   multiform_get_form(array($form_id1, $arg1, $arg2), array($form_id2, $arg3, $arg4)).
+ * @todo
+ * Check multiform.form.inc and other borrowed drupal core code for updates.
  */
-function multiform_get_form() {
-  $all_args = func_get_args();
-  $redirect = NULL;
-  $form = element_info('form');
-  $form['#id'] = 'multiform';
-  $form['#attributes'] = array();
-  // We need a $form_id so that the submission of other forms (like search) do
-  // not disturb us.
-  $form['form_id'] = array(
-    '#type' => 'hidden',
-    '#value' => 'multiform',
-    '#id' => drupal_html_id("edit-multiform"),
-    '#name' => 'form_id',
-    '#attributes' => array(),
-  );
-  $build_id = 'form-' . drupal_random_key();
-  // We need a $form_build_id because the buttons are cached and the values
-  // belonging to them in $_POST are handed to each form so those can recognize
-  // the buttons pressed.
-  $form['form_build_id'] = array(
-    '#type' => 'hidden',
-    '#value' => $build_id,
-    '#id' => $build_id,
-    '#name' => 'form_build_id',
-    '#attributes' => array(),
-  );
-  // This is where buttons will be collected.
-  $form['buttons'] = array();
-  $form['buttons']['#weight'] = 1000;
-  $form['buttons']['#build_id'] = $build_id;
-  $form_state_save = array();
-  $button_names = array();
-  // The only way to support $_GET would be to accept $form_state. Maybe later.
-  if ($_POST && isset($_POST['form_id']) && $_POST['form_id'] == 'multiform' && !empty($_POST['form_build_id'])) {
-    $form_state_save['input'] = $_POST;
-    $_files_save = $_FILES;
-    // Retrieve buttons.
-    if ($button_elements = form_get_cache($_POST['form_build_id'], $form_state_save)) {
-      foreach ($button_elements as $button) {
-        // For each button, save it's name. Later on we will need the button
-        // names because the buttons are used in the multiform but their values
-        // in $_POST (if it exists) needs to be handed down to each form so
-        // those can recognize the button press.
-        $name = isset($button_elements['#name']) ? $button_elements['#name'] : 'op';
-        $button_names[$name] = $name;
-      }
+
+/**
+ * Implements hook_init().
+ *
+ * @todo:
+ * hook_init() isn't called for cached requests.
+ */
+function multiform_init() {
+  // Prepare _POST if ajax request made
+  // @todo: Maybe use other key instead of ajax_page_state.
+  if (isset($_POST['multiform']) && isset($_POST['_triggering_element_name']) && isset($_POST['ajax_page_state'])) {
+    // Define subform index corresponding to _triggering_element_name
+    $subform_index = multiform_subform_ajax_index($_POST);
+    $_POST += $_POST['multiform'][$subform_index];
+    unset($_POST['multiform']);
+  }
+}
+
+
+/**
+ * Get multiform index for ajax request.
+ *
+ * @todo:
+ * Temporary solution
+*/
+function multiform_subform_ajax_index($post) {
+  $triggering_element_name = $post['_triggering_element_name'];
+  $parents = explode('[', str_replace(']', '', $triggering_element_name));
+  foreach ($post['multiform'] as $index => $subform) {
+    $key_exists = FALSE;
+    drupal_array_get_nested_value($subform, $parents, $key_exists);
+    if ($key_exists) {
+      break;
     }
   }
-  foreach ($all_args as $key => $args) {
-    $form_id = array_shift($args);
-    // Reset $form_state and disable redirection.
-    $form_state = array('no_redirect' => TRUE);
-    // This line is copied literally from drupal_get_form().
-    $form_state['build_info']['args'] = $args;
-    $index = $form_id . '_' . $key;
-    if (isset($form_state_save['input']['multiform'][$index])) {
-      // drupal_build_form() honors our $form_state['input'] setup.
-      $form_state['input'] = $form_state_save['input']['multiform'][$index];
-      // Pass in the information about pressed buttons too.
-      foreach ($button_names as $name) {
-        if (isset($form_state_save['input'][$name])) {
-          $form_state['input'][$name] = $form_state_save['input'][$name];
-        }
-      }
+  return $index;
+}
+
+
+/**
+ * Returns a form containing a number of other forms.
+ */
+function multiform_get_form($settings) {
+  module_load_include('inc', 'multiform');
+  module_load_include('inc', 'multiform', 'multiform.form');
+
+  // Initialize multiform settings.
+  $build_id_hash = multiform_init_settings($settings);
+
+  // Set _POST values for sharedfields if any.
+  multiform_sharedfields_process($settings);
+
+  // Preprocess _POST:
+  // Set submits according to submits map if any.
+  // Exclude submits map subform's values from $_POST if any.
+  multiform_preprocess_post($_POST, $settings);
+
+  // Get subforms settings.
+  $subforms = $settings['#subforms'];
+
+  // Inititalize multiform form base structure and return build_id_hash.
+  $build_id_hash = NULL;
+  $form = multiform_init_form($build_id_hash);
+
+  $post = !empty($_POST) ? $_POST : array();
+  $rebuild = FALSE;
+  // Array to store all required data for workflow.
+  $multiform = array();
+  foreach ($subforms as $index => $subform) {
+    $subform_id = $subform['form_id'];
+    $subform_args = $subform['args'];
+
+    // @todo: Validate _POST data structure before doing anything.
+    // Set _POST value as it should be in case of single form.
+    if (isset($post['multiform'][$subform_id])) {
+      $_POST = $post['multiform'][$subform_id];
     }
-    if (isset($_files_save['multiform']['name'][$index])) {
-      $_FILES = array();
-      foreach (array('name', 'type', 'tmp_name', 'error', 'size') as $files_key) {
-        // PHP is seriously messed up, dude.
-        foreach ($_files_save['multiform'][$files_key][$index] as $running_out_of_indexes => $data) {
-          $_FILES[$running_out_of_indexes][$files_key] = $data;
-        }
-      }
+
+    // Initialize $subform_state.
+    $subform_state = multiform_init_subform_state($subform_id, $subform_args, $settings, $subform);
+
+    // Build and process current subform.
+    $unprocessed_subform = array();
+    $subform_form = multiform_drupal_build_subform($subform_id, $subform_state, $unprocessed_subform);
+    // Store data for delayed submit.
+    multiform_delayed_submit_prepare($multiform, $subform_form, $subform_state, $subform_id, $unprocessed_subform);
+
+    // @todo: Temporary solution for #after_execute in multiform_delayed_submit_execute().
+    $multiform['#subforms'][$subform_id]['#subform_settings'] = $subform;
+
+    if ($subform_state['rebuild']) {
+      $rebuild = TRUE;
     }
-    // Build and process this form.
-    $current_form = drupal_build_form($form_id, $form_state);
+  }
+
+  // Get form errors if any.
+  $errors = form_get_errors();
+
+  // @todo: Check for pinch points.
+  // If any of subform is set to be rebuilt, rebuild all subforms.
+  if ($rebuild) {
+    foreach ($multiform['#subforms'] as $subform_id => $subform_prepare) {
+      $multiform['#subforms'][$subform_id]['form_state']['rebuild'] = TRUE;
+    }
+  }
+
+  // Log submitted data for debugging (in case anything goes wrong).
+  if (empty($errors) && !empty($post['multiform']) && module_exists('multiform_log')) {
+    // @todo: fill in context
+    $context = array('rebuild' => $rebuild);
+    $entry_data = array(
+      'multiform_id' => !empty($settings['#multiform_id']) ? $settings['#multiform_id'] : DEFAULT_MULTIFORM_ID,
+      'timestamp' => time(),
+      'post_array' => $post,
+      'context_data' => $context,
+    );
+    multiform_log_create_entry($entry_data);
+  }
+
+  foreach ($subforms as $index => $subform) {
+    $subform_id = $subform['form_id'];
+    $subform_form = $subform_state = array();
+
+    multiform_delayed_submit_execute($multiform, $subform_form, $subform_state, $subform_id);
+
     // Do not render the <form> tags. Instead we render the <form> as a <div>.
-    $current_form['#theme_wrappers'] = array('container');
-    _multiform_get_form($current_form, $form['buttons'], $index);
+    $subform_form['#theme_wrappers'] = array('container');
+    // @todo: Check attributes for multiform itself
     // Unset any attributes specifics to form tags.
     $disallowed_attributes = array('enctype', 'action', 'method');
-    $current_form['#attributes'] = array_diff_key($current_form['#attributes'], array_flip($disallowed_attributes));
-    $form['multiform'][$index] = $current_form;
-    if (isset($form_state['has_file_element'])) {
+    $subform_form['#attributes'] = array_diff_key($subform_form['#attributes'], array_flip($disallowed_attributes));
+
+    $form['multiform'][] = $subform_form;
+
+    if (isset($subform_state['has_file_element'])) {
       $form['#attributes']['enctype'] = 'multipart/form-data';
     }
-    // Keep the redirect from the first form.
-    if (!$key) {
-      $redirect = isset($form_state['redirect']) ? $form_state : array();
-    }
   }
-  form_set_cache($build_id, $form['buttons'], $form_state_save);
-  if (!empty($form_state_save['input'])) {
-    // We forced $form_state['no_redirect'] to TRUE above, so unset it in order
-    // to allow the redirection to proceed.
-    unset($redirect['no_redirect']);
-    drupal_redirect_form($redirect);
+
+  // Set theme function/template name suggestion for the form.
+  if (!empty($settings['#multiform_id'])) {
+    $form['#theme'] = array($settings['#multiform_id']);
   }
+
+  // Prepare settings cache for submits map and hide mapped submits.
+  multiform_cache_prepare($build_id_hash, $settings, $form);
+
+  // @todo: check if it's required (since $errors was provided once earlier).
+  $errors = form_get_errors();
+
+  // Redirect if form was submitted successfully and #redirect_path is set.
+  if (empty($errors) && !empty($post['multiform']) && isset($settings['#redirect_path']) && !$rebuild) {
+    drupal_goto($settings['#redirect_path']);
+  }
+
+  // Set page title if it is set in multiform settings.
+  if (isset($settings['#title'])) {
+    drupal_set_title($settings['#title']);
+  }
+
   return $form;
 }
 
 /**
- * Recursive helper for multiform_get_form().
+ * Implements hook_form_alter().
  */
-function _multiform_get_form(&$element, &$buttons, $form_id) {
+function multiform_form_alter(&$form, &$form_state, $form_id) {
+  if (!empty($form_state['#multiform'])) {
+    $form['#after_build'][] = 'multiform_form_after_build';
+  }
+}
+
+
+/**
+ * Multiform subform #after_build.
+ */
+function multiform_form_after_build(&$form, &$form_state) {
+  // Hide sharedfields if any.
+  multiform_sharedfields_process(NULL, $form, $form_state);
+
+  $form_id = $form_state['#subform_index'];
+  _multiform_get_form($form, $form_id);
+  multiform_multiform_ids($form_id);
+  return $form;
+}
+
+
+/**
+ * Change $element['#name'] to get proper $_POST structure on
+ * multiform submission.
+ */
+function _multiform_get_form(&$element, $form_id) {
   // Recurse.
   foreach (element_children($element) as $key) {
-    _multiform_get_form($element[$key], $buttons, $form_id);
+    _multiform_get_form($element[$key], $form_id);
   }
-  // Save but do not display buttons. Note that this is done before the #name
-  // is changed. This way the buttons belong to the top form and their values
-  // can be handed to each form.
-  if (isset($element['#button_type'])) {
-    $buttons[$element['#value']] = $element;
-    $element['#access'] = FALSE;
-  }
+
   // By only changing $element['#name'] form API is not affected but the
   // browser will put the element values into _POST where multiform_get_form
   // expects them.
-  elseif (isset($element['#name'])) {
+  if (isset($element['#name'])) {
     // If the name was op then we want multiform[$form_id][op]. If it was
     // foo[bar] then we want multiform[$form_id][foo][bar].
     $element['#name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#name']);
   }
 }
+
+
+/**
+ * Store statically $multiform_id. Required for internal use.
+ *
+ * @todo
+ * Add a more comprehensive comment.
+ */
+function multiform_multiform_ids($form_id = NULL) {
+  $multiform_ids = &drupal_static(__FUNCTION__);
+  if (!empty($form_id)) {
+    $multiform_ids[] = $form_id;
+  }
+  return $multiform_ids;
+}
+
+
+/**
+ * Process sharedfields.
+ * Hide dependent sharedfields at form rendering
+ * and set their values in _POST after form submission.
+ */
+function multiform_sharedfields_process($settings, &$form = NULL, &$form_state = NULL) {
+  module_load_include('inc', 'multiform', 'multiform.sharedfields');
+  if ($settings) {
+    $sharedfields_info = multiform_sharedfields_info($settings);
+    if (!empty($_POST)) {
+      multiform_sharedfields_set_post_values($settings, $sharedfields_info);
+    }
+  }
+  // @todo: Maybe this part should be called from inside widget_form_after_build
+  // instead of form_after_build.
+  elseif (!$settings && !empty($form) && isset($form_state['#multiform_settings'])) {
+    $settings = $form_state['#multiform_settings'];
+    $sharedfields_info = multiform_sharedfields_info($settings);
+    // @todo: Do smth with hidden fields validation
+    multiform_sharedfields_hide_elements($settings, $sharedfields_info, $form, $form_state);
+  }
+}
+

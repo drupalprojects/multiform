@@ -37,12 +37,12 @@ class MultiformTestCase extends DrupalWebTestCase {
     $this->drupalGet('multiform-test/1');
 
     // Check buttons.
-    $this->assertFieldByName('op', 'save');
-    $this->assertFieldByName('op', 'delete');
+    $this->assertFieldByName('multiform[multiform_submits_form][op]', 'save');
+    $this->assertFieldByName('multiform[multiform_submits_form][op]', 'delete');
 
     // No more buttons.
     $submitButtons = $this->xpath('//input[@type="submit" and @name!="op"]');
-    $this->assertEqual(count($submitButtons), 0, t('No more submit button.'));
+    $this->assertEqual(count($submitButtons), 2, t('No more submit button.'));
 
     // Save button.
     $this->drupalPost(NULL, array(), 'save');
@@ -63,19 +63,19 @@ class MultiformTestCase extends DrupalWebTestCase {
     $this->drupalGet('multiform-test/2');
 
     // Check textfields.
-    $this->assertFieldByName('multiform[multiform_test2_1_0][required_text_1]');
-    $this->assertFieldByName('multiform[multiform_test2_2_1][required_text_2]');
+    $this->assertFieldByName('multiform[multiform_test2_1][required_text_1]');
+    $this->assertFieldByName('multiform[multiform_test2_2][required_text_2]');
 
     // Check button.
-    $this->assertFieldByName('op', 'save');
+    $this->assertFieldByName('multiform[multiform_submits_form][op]', 'save');
   }
 
   /**
    * Check required fields.
    */
   public function testRequiredFields() {
-    $first_text = array('multiform[multiform_test2_1_0][required_text_1]' => 'test1 value');
-    $second_text = array('multiform[multiform_test2_2_1][required_text_2]' => 'test2 value');
+    $first_text = array('multiform[multiform_test2_1][required_text_1]' => 'test1 value');
+    $second_text = array('multiform[multiform_test2_2][required_text_2]' => 'test2 value');
     // No required fields.
     $this->drupalPost('multiform-test/2', array(), 'save');
     $this->assertText('test1 field is required.');
@@ -90,13 +90,15 @@ class MultiformTestCase extends DrupalWebTestCase {
     $this->assertNoText('test1 field is required.');
     $this->assertNoText('test2 field is required.');
 
+    $first_text_empty = array('multiform[multiform_test2_1][required_text_1]' => '');
+    $second_text_empty = array('multiform[multiform_test2_2][required_text_2]' => '');
     // Send first form's required field.
-    $this->drupalPost(NULL, $first_text, 'save');
+    $this->drupalPost(NULL, array_merge($first_text, $second_text_empty), 'save');
     $this->assertNoText('multiform_test2_1multiform_test2_submit_button');
     $this->assertText('test2 field is required.');
 
     // Send second form's required field.
-    $this->drupalPost(NULL, $second_text, 'save');
+    $this->drupalPost(NULL, array_merge($first_text_empty, $second_text), 'save');
     $this->assertNoText('multiform_test2_2multiform_test2_submit_button');
     $this->assertText('test1 field is required.');
   }
