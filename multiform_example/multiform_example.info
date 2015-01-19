@@ -1,0 +1,7 @@
+name = Multiform Example
+description = Provides usage examples for Multiform module.
+core = 7.x
+package = Multiform
+
+dependencies[] = multiform
+dependencies[] = multiform_example_content_types
