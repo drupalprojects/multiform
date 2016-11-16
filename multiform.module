@@ -106,6 +106,9 @@ function multiform_get_form() {
     }
   }
   form_set_cache($build_id, $form['buttons'], $form_state_save);
+
+  drupal_alter('multiform_get_form', $form_state_save, $redirect, $all_args);
+
   if (!empty($form_state_save['input'])) {
     // We forced $form_state['no_redirect'] to TRUE above, so unset it in order
     // to allow the redirection to proceed.
