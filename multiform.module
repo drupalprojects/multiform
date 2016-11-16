@@ -91,7 +91,10 @@ function multiform_get_form() {
     // Build and process this form.
     $current_form = drupal_build_form($form_id, $form_state);
     // Do not render the <form> tags. Instead we render the <form> as a <div>.
-    $current_form['#theme_wrappers'] = array('container');
+    $form_wrapper_index = array_search('form', $current_form['#theme_wrappers']);
+    if ($form_wrapper_index !== FALSE) {
+      $current_form['#theme_wrappers'][$form_wrapper_index] = 'container';
+    }
     _multiform_get_form($current_form, $form['buttons'], $index);
     // Unset any attributes specifics to form tags.
     $disallowed_attributes = array('enctype', 'action', 'method');
