@@ -133,12 +133,19 @@ function _multiform_get_form(&$element, &$buttons, $form_id) {
     $buttons[$element['#value']] = $element;
     $element['#access'] = FALSE;
   }
-  // By only changing $element['#name'] form API is not affected but the
-  // browser will put the element values into _POST where multiform_get_form
-  // expects them.
-  elseif (isset($element['#name'])) {
-    // If the name was op then we want multiform[$form_id][op]. If it was
-    // foo[bar] then we want multiform[$form_id][foo][bar].
-    $element['#name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#name']);
+  else {
+    // By only changing $element['#name'] form API is not affected but the
+    // browser will put the element values into _POST where multiform_get_form
+    // expects them.
+    if (isset($element['#name'])) {
+      // If the name was op then we want multiform[$form_id][op]. If it was
+      // foo[bar] then we want multiform[$form_id][foo][bar].
+      $element['#name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#name']);
+    }
+    // We repeat this for any $element['#attributes']['name'], which show up in
+    // the rendering arrays of certain multi-value select elements.
+    if (isset($element['#attributes']['name'])) {
+      $element['#attributes']['name'] = "multiform[$form_id]" . preg_replace('/^[^[]+/', '[\0]', $element['#attributes']['name']);
+    }
   }
 }
