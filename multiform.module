@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Module file for the multiform module, which creates a forms.
+ */
+
+/**
  * Returns a form containing a number of other forms.
  *
  * When the forms are submitted their first button is pressed in array order.
